@@ -1,10 +1,10 @@
 from distutils.core import setup
 from setuptools import find_packages
-
 import i99fix
 
 setup(
     name=i99fix.__app_name__,
+    packages=find_packages(exclude=('tests',)),
     version=i99fix.__version__,
     author='Madra David',
     author_email='madra@199fix.com',
@@ -14,7 +14,7 @@ setup(
     license='MIT',
     long_description=open('README.rst').read(),
     install_requires=['Django>=1.4'],
-    keywords=['logging', 'uptime monitoring', 'error monitoring', 'Development mode'],
+    keywords=['logging', 'uptime monitoring'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Web Environment',
@@ -29,6 +29,5 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
-        'Topic :: System :: Logging',
     ],
 )

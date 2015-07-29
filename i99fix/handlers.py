@@ -11,19 +11,17 @@ from xml.etree.ElementTree import Element, tostring, SubElement
 from django.core.urlresolvers import resolve
 from django.http import Http404
 
-from airbrake import __version__, __app_name__, __app_url__
+from i99fix import __version__, __app_name__, __app_url__
 
-# Adapted from Pulse Energy's AirbrakePy
-# https://github.com/pulseenergy/airbrakepy
-# Changes for django compatibility by Bouke Haarsma
 
-_DEFAULT_API_URL = 'https://airbrakeapp.com/notifier_api/v2/notices'
+
+_DEFAULT_API_URL = 'https://199fix.com/notifier/api/v2/notices'
 _DEFAULT_ENV_VARIABLES = ['DJANGO_SETTINGS_MODULE', ]
 _DEFAULT_META_VARIABLES = ['HTTP_USER_AGENT', 'HTTP_COOKIE', 'REMOTE_ADDR',
                            'SERVER_NAME', 'SERVER_SOFTWARE', ]
 
 
-class AirbrakeHandler(logging.Handler):
+class I99FixHandler(logging.Handler):
     def __init__(self, api_key, env_name, api_url=_DEFAULT_API_URL,
                  timeout=30, env_variables=_DEFAULT_ENV_VARIABLES,
                  meta_variables=_DEFAULT_META_VARIABLES):
@@ -136,4 +134,4 @@ class AirbrakeHandler(logging.Handler):
             exceptionMessage = "Unexpected status code {0}".format(str(status))
 
         # @todo log this message, but prevent circular logging
-        raise Exception('[django-airbrake] %s' % exceptionMessage)
+        raise Exception('[199fix] %s' % exceptionMessage)
