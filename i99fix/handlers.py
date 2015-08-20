@@ -6,18 +6,15 @@ try:
 except ImportError:
     from urllib2 import Request, urlopen, HTTPError
 import os
-from xml.etree.ElementTree import Element, tostring, SubElement
-
 from django.core.urlresolvers import resolve
 from django.http import Http404
+import json
+from i99fix import __version__
 
-from i99fix import __version__, __app_name__, __app_url__
 
-
-
-_DEFAULT_API_URL = 'https://199fix.com/notifier/api/v2/notices'
+_DEFAULT_API_URL = 'https://199fix.com/api/logger/'
 _DEFAULT_ENV_VARIABLES = ['DJANGO_SETTINGS_MODULE', ]
-_DEFAULT_META_VARIABLES = ['HTTP_USER_AGENT', 'HTTP_COOKIE', 'REMOTE_ADDR',
+_DEFAULT_META_VARIABLES = ['HTTP_USER_AGENT', 'REMOTE_ADDR',
                            'SERVER_NAME', 'SERVER_SOFTWARE', ]
 
 
@@ -34,28 +31,30 @@ class I99FixHandler(logging.Handler):
         self.timeout = timeout
 
     def emit(self, record):
-        self._sendMessage(self._generate_xml(record))
+        try:
+            self._sendMessage(self.generate_json(record))
+        except Exception:
+            pass
 
-    def _generate_xml(self, record):
+    def generate_json(self, record):
+        '''
+        generate json 
+        from data
+        '''
         exn = None
         trace = None
+        data = {}
+        '''initial values'''
+        data['__version__'] = __version__
+        data['api-key'] = self.api_key
+        data['environment-name'] = self.env_name
+
         if record.exc_info:
             _, exn, trace = record.exc_info
 
         message = record.getMessage()
         if exn:
-            message = "{0}: {1}".format(message, str(exn))
-
-        xml = Element('notice', dict(version='2.0'))
-        SubElement(xml, 'api-key').text = self.api_key
-
-        notifier = SubElement(xml, 'notifier')
-        SubElement(notifier, 'name').text = __app_name__
-        SubElement(notifier, 'version').text = __version__
-        SubElement(notifier, 'url').text = __app_url__
-
-        server_env = SubElement(xml, 'server-environment')
-        SubElement(server_env, 'environment-name').text = self.env_name
+            message = "{0}: {1}".format(message, str(exn))        
 
         if hasattr(record, 'request'):
             request = record.request
@@ -63,75 +62,85 @@ class I99FixHandler(logging.Handler):
                 match = resolve(request.path_info)
             except Http404:
                 match = None
+            
+            print request.get_host()
+            #if not match:
+            data['host'] = request.get_host()
+            #else:
+            #    data['host'] = match    
 
-            request_xml = SubElement(xml, 'request')
-            SubElement(request_xml, 'url').text = request.build_absolute_uri()
+            data['REMOTE_ADDR'] = request.META.get('REMOTE_ADDR','')
+            data['url'] = request.build_absolute_uri()
 
-            if match:
-                SubElement(request_xml, 'component').text = match.url_name
-                SubElement(request_xml, 'action').text = request.method
 
-            params = SubElement(request_xml, 'params')
-            for key, value in request.POST.items():
-                SubElement(params, 'var', dict(key=key)).text = str(value)
-
-            session = SubElement(request_xml, 'session')
-            for key, value in getattr(request, 'session', {}).items():
-                SubElement(session, 'var', dict(key=key)).text = str(value)
-
-            cgi_data = SubElement(request_xml, 'cgi-data')
+            cgi_data = []
             for key, value in os.environ.items():
                 if key in self.env_variables:
-                    SubElement(cgi_data, 'var', dict(key=key)).text = str(value)
+                    '''cgi data'''
+                    cgi_data.append({key: value})
+
             for key, value in request.META.items():
                 if key in self.meta_variables:
-                    SubElement(cgi_data, 'var', dict(key=key)).text = str(value)
+                    '''more cgi data'''
+                    cgi_data.append({key: value})
+            data['cgi_data'] = cgi_data
 
-        error = SubElement(xml, 'error')
-        SubElement(error, 'class').text = exn.__class__.__name__ if exn else ''
-        SubElement(error, 'message').text = message
+        data['exception'] = exn.__class__.__name__ if exn else ''
+        data['message'] = message
 
-        backtrace = SubElement(error, 'backtrace')
+
+        backtrace = []
         if trace is None:
-            SubElement(backtrace, 'line', dict(file=record.pathname,
-                                               number=str(record.lineno),
-                                               method=record.funcName))
+            trace_data = {'file':record.pathname,
+                    'number':str(record.lineno),
+                    'method':record.funcName
+                    }
         else:
             for pathname, lineno, funcName, text in traceback.extract_tb(trace):
-                SubElement(backtrace, 'line', dict(file=pathname,
-                                                   number=str(lineno),
-                                                   method='%s: %s' % (funcName,
-                                                                      text)))
-
-        return tostring(xml)
+                trace_data = {'file':pathname,
+                    'number':str(lineno),
+                    'method':'%s: %s' % (funcName, text)
+                    }
+        data['backtrace'] = trace_data
+        return data
+        
 
     def _sendHttpRequest(self, headers, message):
-        request = Request(self.api_url, message, headers)
+        '''
+        send json request to url
+        '''
         try:
-            response = urlopen(request, timeout=self.timeout)
+            req = Request(self.api_url)
+            req.add_header('Content-Type', 'application/json')
+            response = urlopen(req, json.dumps(message), timeout=self.timeout)
             status = response.getcode()
         except HTTPError as e:
             status = e.code
         return status
 
     def _sendMessage(self, message):
-        headers = {"Content-Type": "text/xml"}
+        '''
+        send message
+        '''
+        headers = {"Content-Type": "application/json"}
         status = self._sendHttpRequest(headers, message)
+        print status
         if status == 200:
             return
 
         if status == 403:
-            exceptionMessage = "Unable to send using SSL"
+            exceptionMessage = "Invalid API credentials"
         elif status == 422:
-            exceptionMessage = "Invalid XML sent: {0}".format(message)
+            exceptionMessage = "Invalid Json sent: {0}".format(message)
         elif status == 500:
             exceptionMessage = "Destination server is unavailable. " \
                                "Please check the remote server status."
         elif status == 503:
             exceptionMessage = "Service unavailable. You may be over your " \
                                "quota."
+        elif status == 303:
+            exceptionMessage = "Invalid App Url"
         else:
             exceptionMessage = "Unexpected status code {0}".format(str(status))
-
-        # @todo log this message, but prevent circular logging
+            
         raise Exception('[199fix] %s' % exceptionMessage)
