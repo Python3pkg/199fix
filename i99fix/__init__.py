@@ -1,3 +1,3 @@
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 __app_name__ = '199Fix'
 __app_url__ = 'https://github.com/199fix/199fix'
