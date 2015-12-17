@@ -19,30 +19,30 @@ Add ``'199fix.handlers.I99FixHandler'`` as a logging handler:
 ::
 
     LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'filters': {
-            'require_debug_false': {
-                '()': 'django.utils.log.RequireDebugFalse'
-            }
-        },
-        'handlers': {
-            '199fix': {
-                'level': 'INFO',
-                'class': '199fix.handlers.I99FixHandler',
-                'filters': ['require_debug_false'],
-                'api_key': '[your-api-key]',
-                'env_name': 'production',
-            }
-        },
-        'loggers': {
-            'django': {
-                'handlers': ['199fix'],
-                'level': 'INFO',
-                'propagate': True,
-            },
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse'
         }
+    },
+    'handlers': {
+        '199fix': {
+            'level': 'ERROR',
+            'class': 'i99fix.handlers.I99FixHandler',
+            'filters': ['require_debug_false'],
+            'api_key': '[your-api-key]',
+            'env_name': 'production',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['199fix'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
     }
+}
 
 Settings
 ========
@@ -54,7 +54,7 @@ Settings
     API key , Get one here https://199fix.com/.
 
 ``env_name`` (required)
-    Name of the environment (e.g. production, develop, testing)
+    Name of the environment (e.g. production, development)
 
 Contributing
 ============
