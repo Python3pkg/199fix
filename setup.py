@@ -9,7 +9,7 @@ setup(
     author='Madra David',
     author_email='madra@199fix.com',
     url=i99fix.__app_url__,
-    download_url='https://github.com/199fix/199fix/tarball/0.2',
+    download_url='https://github.com/199fix/199fix/tarball/0.3',
     description='199fix exception logger for Django',
     license='MIT',
     long_description=open('README.rst').read(),
