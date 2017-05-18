@@ -142,7 +142,7 @@ class XMLDataTest(TestCase):
             pass
 
         self.assertEqual(urlopen.call_count, 1)
-        print((urlopen.call_args[0][0].data))
+        print(urlopen.call_args[0][0].data)
         xsd_validate(urlopen.call_args[0][0].data)
 
 

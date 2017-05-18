@@ -4,8 +4,7 @@ try:
     from urllib.request import Request, urlopen
     from urllib.error import HTTPError
 except ImportError:
-    from urllib.request import Request, urlopen
-    from urllib.error import HTTPError
+    from urllib2 import Request, urlopen, HTTPError
 import json
 from i99fix import __version__
 
@@ -57,7 +56,7 @@ class I99FixHandler(logging.Handler):
         if hasattr(record, 'request'):
             request = record.request
             cgi_data = []
-            for key, value in list(request.META.items()):
+            for key, value in request.META.items():
                 if key in self.meta_variables:
                     '''more data'''
                     cgi_data.append({key: value})
